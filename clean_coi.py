@@ -3,41 +3,91 @@ import numpy as np
 import re
 
 # --- CONFIGURACIÓN ---
-FILE_PATH = 'aux_coi_diciembre.xlsx' 
+FILE_PATH = 'aux_coi_dic.xlsx' 
 
-def obtener_nombre_rubro(cuenta_str):
-    c = str(cuenta_str).strip()
-    
-    # REGLAS DE NOMBRES DE GRUPOS
-    if c.startswith("111"): return "Caja"
-    if c.startswith("112"): return "Bancos"          
-    if c.startswith("114"): return "Otros Activos"
-    
-    # --- AGRUPACIÓN DE CLIENTES ---
-    # 1. Extranjeros aparte (para que no se mezclen en la suma nacional)
-    if c.startswith("1150-002") or c.startswith("1150-003"): 
+def obtener_nombre_rubro(cuenta_str: str) -> str:
+    c = str(cuenta_str or "").strip()
+
+    # --------------------
+    # ACTIVO CIRCULANTE
+    # --------------------
+    if c.startswith("1110"): return "Caja"
+
+    # Bancos (en el archivo existen 1120, 1121, 1122)
+    if c.startswith("112"):  return "Bancos"
+
+    if c.startswith("1140"): return "Otros Activos"
+
+    # --- CLIENTES (1150) ---
+    # Extranjeros (en el archivo: 1150-002 y 1150-003)
+    if c.startswith("1150-002") or c.startswith("1150-003"):
         return "Clientes Extranjeros"
-    
-    # 2. Clientes Nacionales (Incluye 1150-001 y 1150-004)
-    # Al ponerles el mismo nombre, el Excel los agrupará y sumará juntos en el encabezado amarillo.
-    if c.startswith("115"): 
+
+    # Nacionales (todo lo demás dentro de 1150)
+    if c.startswith("1150"):
         return "Clientes Nacionales"
-    
-    if c.startswith("117"): return "Deudores Diversos"
-    if c.startswith("118"): return "Impuestos Acreditables"
-    if c.startswith("119"): return "Impuestos por Acreditar"
-    if c.startswith("120"): return "Anticipo a Proveedores"
-    
-    if c.startswith("201") or c.startswith("210"): return "Proveedores"
-    if c.startswith("211"): return "Impuestos por Pagar"
-    if c.startswith("212"): return "Acreedores Diversos"
-    if c.startswith("219"): return "Anticipo de Clientes"
-    
-    if c.startswith("51"):  return "Ventas"
-    if c.startswith("71"):  return "Gastos de Operación"
-    if c.startswith("72"):  return "Gastos Financieros"
-    
+
+    if c.startswith("1170"): return "Deudores Diversos"
+    if c.startswith("1180"): return "Impuestos Acreditables"
+    if c.startswith("119"):  return "Impuestos por Acreditar"   # en tu archivo incluye 1190/1191/1192
+    if c.startswith("120"):  return "Anticipo a Proveedores"    # en tu archivo incluye 1200/1201
+
+    # Estos rubros vienen como "Rubro XXXX" en el Excel pero con descripción clara
+    if c.startswith("1210"): return "Pagos Anticipados"
+    if c.startswith("1215"): return "Anticipos a Proveedores"
+    if c.startswith("1220"): return "Anticipos de Impuestos"
+    if c.startswith("1310"): return "Propiedades, Planta y Equipo"
+    if c.startswith("1360"): return "Depreciación"
+
+    # --------------------
+    # PASIVO
+    # --------------------
+    # Nota: en tu Excel el grupo que aparece como "Impuestos por Pagar" trae 2110/2115 con descripción PROVEEDORES,
+    # así que por consistencia de tu archivo los mapeo como Proveedores.
+    if c.startswith("2110") or c.startswith("2115"):
+        return "Proveedores"
+
+    if c.startswith("2120"): return "Acreedores Diversos"
+    if c.startswith("2130"): return "Documentos por Pagar"
+    if c.startswith("2140"): return "Impuestos y Derechos por Pagar"
+    if c.startswith("2150"): return "Impuestos y Contribuciones Retenidos"
+    if c.startswith("2151"): return "Retenciones IVA Personas Físicas"
+    if c.startswith("2160"): return "Provisión de Nómina"
+    if c.startswith("2170"): return "Provisión de Contribuciones por Pagar"
+    if c.startswith("2180"): return "Impuestos Trasladados Cobrados"
+    if c.startswith("2181"): return "Impuestos Trasladados por Cobrar"
+    if c.startswith("2190"): return "Anticipo de Clientes"
+
+    # --------------------
+    # CAPITAL CONTABLE
+    # --------------------
+    if c.startswith("3100"): return "Capital Social"
+    if c.startswith("3300"): return "Resultado de Ejercicios Anteriores"
+    if c.startswith("3400"): return "Resultado del Ejercicio"
+
+    # --------------------
+    # RESULTADOS
+    # --------------------
+    if c.startswith("4100"): return "Ventas"
+    if c.startswith("4200"): return "Descuentos y Devoluciones sobre Ventas"
+    if c.startswith("5000"): return "Costo de Ventas"
+    if c.startswith("5100"): return "Otros Costos de Ventas"
+    if c.startswith("5200"): return "Costos de Chocolates"
+
+    if c.startswith("6100"): return "Gastos de Venta"
+    if c.startswith("6200"): return "Gastos de Administración"
+    if c.startswith("6300"): return "Depreciación (Gastos)"
+
+    # En tu archivo 7100 se llama PRODUCTOS FINANCIEROS, 7200 GASTOS FINANCIEROS
+    if c.startswith("7100"): return "Productos Financieros"
+    if c.startswith("7200"): return "Gastos Financieros"
+
+    if c.startswith("7300"): return "Otros Productos"
+    if c.startswith("7400"): return "Otros Gastos"
+
+    # Fallback: Rubro por los primeros 4 dígitos (como venías haciendo)
     return f"Rubro {c[:4]}"
+
 
 def limpiar_saldo(valor):
     if pd.isna(valor): return None

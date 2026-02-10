@@ -2,96 +2,218 @@ import pandas as pd
 import numpy as np
 
 # --- CONFIGURACIÓN ---
-FILE_PATH = 'libro_mayor_diciembre.xlsx'
+FILE_PATH = 'libro_mayor_dic.xlsx'
 HEADER_ROW = 2 
 
 MAJOR_NAME_MAP = {
     # --- ACTIVOS ---
     "101": "Caja",
-    "102": "Banco",
+    "101.01": "Caja y efectivo",
+
+    "102": "Bancos",
     "102.01": "Bancos nacionales",
     "102.02": "Bancos extranjeros",
+
+    # En tu columna: "Otros instrumentos financieros"
     "104": "Otros instrumentos financieros",
+    "104.01": "Otros instrumentos financieros",
+
     "105": "Clientes",
+    "105.01": "Clientes nacionales",
     "105.02": "Clientes extranjeros",
+
     "107": "Deudores diversos",
     "107.02": "Socios y accionistas",
     "107.05": "Otros deudores diversos",
+
+    # En tu columna va después de 119 pero es Activo: Pagos anticipados
     "109": "Pagos anticipados",
+    "109.01": "Seguros y fianzas pagados por anticipado nacional",
+    "109.23": "Otros pagos anticipados",
+
     "113": "Impuestos a favor",
+    "113.01": "IVA a favor",
+    "113.02": "ISR a favor",
+    "113.06": "Subsidio al empleo",
+
     "114": "Pagos provisionales",
+    "114.01": "Pagos provisionales de ISR",
+
     "115": "Inventario",
+    "115.01": "Inventario",
+    "115.02": "Materia prima y materiales",
+    "115.07": "Otros",
+
     "118": "Impuestos acreditables pagados",
+    "118.01": "IVA acreditable pagado",
+    "118.03": "IEPS acreditable pagado",
+
     "119": "Impuestos acreditables por pagar",
+    "119.01": "IVA pendiente de pago",
+    "119.03": "IEPS pendiente de pago",
+
     "120": "Anticipo a proveedores",
-    
+    "120.01": "Anticipo a proveedores nacional",
+    "120.02": "Anticipo a proveedores extranjero",
+
     # --- ACTIVOS FIJOS ---
     "153": "Maquinaria y equipo",
-    "154": "Automóviles, autobuses y camiones",
+    "153.01": "Maquinaria y equipo",
+
+    # En tu columna el 154 es el rubro largo; lo anclas así y dejas subgrupo 154.01
+    "154": "Automóviles, autobuses, camiones de carga, tractocamiones, montacargas y remolques",
+    "154.01": "Automóviles, autobuses, camiones de carga, tractocamiones, montacargas y remolques",
+
     "155": "Mobiliario y equipo de oficina",
+    "155.01": "Mobiliario y equipo de oficina",
+
     "156": "Equipo de cómputo",
+    "156.01": "Equipo de cómputo",
+
     "160": "Otros activos fijos",
-    "171": "Depreciación acumulada",
-    
+    "160.01": "Otros activos fijos",
+
+    "171": "Depreciación acumulada de activos fijos",
+    "171.02": "Depreciación acumulada de maquinaria y equipo",
+    "171.03": "Depreciación acumulada de automóviles, autobuses y camiones",
+    "171.04": "Depreciación acumulada de mobiliario y equipo de oficina",
+    "171.05": "Depreciación acumulada de equipo de cómputo",
+
+    # En tu columna aparece 183
+    "183": "Amortización acumulada de activos diferidos",
+    "183.01": "Amortización acumulada de gastos diferidos",
+
     # --- PASIVOS ---
     "201": "Proveedores",
-    "205": "Acreedores diversos",
-    "206": "Anticipo de clientes",
-    "210": "Provisión de sueldos",
-    "211": "Impuestos por pagar (IMSS/Infonavit)",
-    "213": "IVA por pagar",
-    "216": "Retenciones de impuestos",
-    
+    "201.01": "Proveedores nacionales",
+    "201.02": "Proveedores extranjeros",
+    "201.03": "Otras cuentas de proveedores",  # (ej. garantías comerciales)
+
+    "205": "Acreedores diversos a corto plazo",
+    "205.01": "Socios, accionistas o representante legal",
+    "205.02": "Acreedores diversos a corto plazo nacional",
+    "205.06": "Mercancías recibidas - no facturas",
+
+    # En tu columna también aparece 251
+    "251": "Acreedores diversos a largo plazo",
+    "251.02": "Acreedores diversos a largo plazo nacional",
+    "251.03": "Acreedores diversos a largo plazo extranjero",
+
+    "206": "Anticipo de cliente",
+    "206.01": "Anticipo de cliente nacional",
+
+    "208": "Impuestos trasladados cobrados",
+    "208.01": "IVA trasladado cobrado",
+
+    # En tu columna aparece 209 (no estaba en tu mapa)
+    "209": "Impuestos trasladados no cobrados",
+    "209.01": "IVA trasladado no cobrado",
+
+    "210": "Provisión de sueldos y salarios por pagar",
+    "210.01": "Provisión de sueldos y salarios por pagar",
+    "210.07": "Provisión de otros sueldos y salarios por pagar",
+
+    "211": "Provisión de contribuciones de seguridad social por pagar",
+    "211.01": "Provisión de IMSS patronal por pagar",
+    "211.02": "Provisión de SAR por pagar",
+    "211.03": "Provisión de Infonavit por pagar",
+
+    "213": "Impuestos y derechos por pagar",
+    "213.01": "IVA por pagar",
+    "213.04": "Impuesto estatal sobre nómina por pagar",
+
+    "216": "Impuestos retenidos",
+    "216.01": "Retenciones ISR por sueldos y salarios",
+    "216.02": "Retenciones ISR por asimilados a salarios",
+    "216.03": "Retenciones ISR por arrendamiento",
+    "216.04": "Retenciones ISR por servicios profesionales",
+    "216.10": "Impuestos retenidos de IVA",
+    "216.11": "Retenciones de IMSS a los trabajadores",
+
     # --- CAPITAL ---
     "301": "Capital social",
-    
+    "301.01": "Capital fijo",
+    "301.02": "Capital variable",
+
+    # En tu columna aparecen 304 y 305
+    "304": "Resultado de ejercicios anteriores",
+    "304.01": "Utilidad de ejercicios anteriores",
+
+    "305": "Resultado del ejercicio",
+    "305.01": "Utilidad del ejercicio",
+
     # --- INGRESOS Y COSTOS ---
     "401": "Ingresos",
-    "501": "Costos",
-    
+    "401.01": "Ventas y/o servicios gravados a la tasa general",
+    "401.04": "Ventas y/o servicios gravados al 0%",
+
+    # En tu columna aparece 402
+    "402": "Devoluciones, descuentos o bonificaciones sobre ingresos",
+    "402.02": "Devoluciones, descuentos o bonificaciones sobre ventas y/o servicios al 0%",
+
+    "501": "Costo de venta y/o servicio",
+    "501.01": "Costo de venta",
+    "501.08": "Otros conceptos de costo",
+
     # --- RESULTADOS (GASTOS Y PRODUCTOS) ---
-    "601": "Gastos Generales",
+    "601": "Gastos generales",
+    "601.84": "Otros gastos generales",
+
     "602": "Costo de venta",
+    # Lo que sí aparece como nodo en tu columna (y/o ya lo traías)
     "602.72": "Fletes y acarreos",
-    "602.34": "Honorarios a personas físicas residentes nacionales",
     "602.61": "Propaganda y publicidad",
-    
+    "602.34": "Honorarios a personas físicas residentes nacionales",
+    "602.84": "Otros gastos de venta",  # en tu columna hay varios 602.84.xx
+
     "603": "Gastos de administración",
     "603.01": "Sueldos y salarios",
-    "603.31": "Asimilados a salarios",
     "603.03": "Tiempos extras",
-    "603.22": "Estímulo al personal",
-    "603.12": "Aguinaldo",
     "603.06": "Vacaciones",
     "603.07": "Prima vacacional",
+    "603.12": "Aguinaldo",
     "603.15": "Despensa",
+    "603.16": "Transporte",
+    "603.22": "Estímulo al personal",
+    "603.25": "Otras prestaciones al personal",
     "603.26": "Cuotas al IMSS",
+    "603.27": "Aportaciones al Infonavit",
     "603.28": "Aportaciones al SAR",
-    "603.27": "Aportaciones al infonavit",
     "603.29": "Impuesto estatal sobre nóminas",
+    "603.31": "Asimilados a salarios",
+    "603.34": "Honorarios a personas físicas residentes nacionales",
+    "603.48": "Combustibles y lubricantes",
+    "603.49": "Viáticos y gastos de viaje",
+    "603.50": "Teléfono, internet",
     "603.54": "Limpieza",
+    "603.55": "Papelería y artículos de oficina",
     "603.56": "Mantenimiento y conservación",
     "603.57": "Seguros y fianzas",
-    "603.55": "Papelería y artículos de oficina",
-    "603.34": "Honorarios a personas físicas residentes nacionales",
     "603.58": "Otros impuestos y derechos",
-    "603.50": "Teléfono, internet",
-    "603.48": "Combustibles y lubricantes",
-    "603.16": "Transporte",
-    "603.25": "Otras prestaciones al personal",
-    "603.49": "Viáticos y gastos de viaje",
     "603.81": "Gastos no deducibles (sin requisitos fiscales)",
     "603.82": "Otros gastos de administración",
-    
+
     "604": "Gastos de fabricación",
+    "604.56": "Mantenimiento y conservación de maquinaria y equipo",
     "604.59": "Recargos fiscales",
-    
+
+    # --- 7 Resultado ---
     "701": "Gastos financieros",
+    "701.01": "Pérdida cambiaria",
+    "701.05": "Intereses a cargo bancario extranjero",
+    "701.10": "Comisiones bancarias",
+
     "702": "Productos financieros",
     "702.01": "Utilidad cambiaria",
+    "702.04": "Intereses a favor bancarios nacional",
+
     "703": "Otros gastos",
-    "704": "Otros productos"
+    "703.02": "Pérdida en venta y/o baja de edificios",
+
+    "704": "Otros productos",
+    "704.03": "Ganancia en venta y/o baja de maquinaria y equipo",
 }
+
 
 def procesar_contabilidad():
     print(f"--- Procesando {FILE_PATH} (Saldo tomado directamente del renglón de la cuenta) ---")
