@@ -187,11 +187,15 @@ def generar_analisis_v18_7():
         desc_o = str(row['Descripcion']).strip()
         saldo_o = row['Saldo_L']
 
-        if not desc_o or desc_o == "" or (saldo_o == 0 and cta_o == ""):
+        if not desc_o or desc_o == "":
             continue
         if "recibo" in desc_o.lower() and "pendiente" in desc_o.lower():
             continue
         if desc_o.startswith("Suma") and cta_o not in HEADER_MAP and not cta_o.startswith("206"):
+            continue
+        # Cuentas de detalle con saldo cero no aportan al reporte:
+        # su grupo padre (en HEADER_MAP) ya cubre la comparación.
+        if abs(saldo_o) < 0.01 and cta_o not in HEADER_MAP:
             continue
 
         for pref_c, cta_ref in COI_TO_ODOO_SECTION.items():
@@ -232,6 +236,26 @@ def generar_analisis_v18_7():
                 item['COI_Saldo'] = c['Saldo']
 
                 cuentas_coi_consumidas.add(key_norm)
+
+                # Cuando la cuenta Odoo es de HEADER_MAP y su contraparte COI es
+                # una abuela (-000-000) o mama (-XXX-000), marcar todas sus
+                # sub-cuentas COI como consumidas. El total COI del padre ya incluye
+                # todas las hojas: no las necesitamos como huérfanas separadas.
+                coi_norm_orig = normalize_code(c['Cuenta_Orig'])
+                if is_h and not coi_norm_orig.startswith('SUMA'):
+                    if coi_norm_orig.endswith('000000'):
+                        # Abuela: consume todo lo que comparte los primeros 4 dígitos
+                        pfx = coi_norm_orig[:4]
+                        for k in coi_lookup:
+                            if k.startswith(pfx) and not k.startswith('SUMA'):
+                                cuentas_coi_consumidas.add(k)
+                    elif coi_norm_orig.endswith('000'):
+                        # Mama: consume las hojas que comparten los primeros 7 dígitos
+                        pfx = coi_norm_orig[:7]
+                        for k in coi_lookup:
+                            if k.startswith(pfx) and not k.startswith('SUMA'):
+                                cuentas_coi_consumidas.add(k)
+
                 if key_norm in [normalize_code(k) for k in VIRTUAL_COI_SUMS]:
                     orig_key = c['Cuenta_Orig']
                     for comp in VIRTUAL_COI_SUMS.get(orig_key, []):
@@ -265,17 +289,22 @@ def generar_analisis_v18_7():
                     item['COI_Cta'] = f"[En {HEADER_MAP[parent_odoo]}]"
                     item['COI_Desc'] = f"Incluida en grupo {parent_odoo}"
 
+        # SIN CUENTA PROPIA: el padre en HEADER_MAP ya cubre este saldo en su suma.
+        # Omitirlas limpia el reporte sin perder información real.
+        if item['Status'] == 'SIN CUENTA PROPIA':
+            continue
+
         rows_final.append(item)
 
-    # ── Inserción de cuentas COI sin contraparte en Elisa ("NO EN ELISA") ─────
+    # ── Cuentas COI con saldo pero sin contraparte en Elisa ("NO EN ELISA") ────
+    # Solo se muestran las que tienen saldo significativo: si el padre ya fue
+    # consumido por un HEADER_MAP, sus hojas están marcadas como consumidas
+    # y no generan falsos huérfanos.
     for norm_key, data in coi_lookup.items():
         if norm_key in cuentas_coi_consumidas:
             continue
-        
-        # ELIMINADO EL FILTRO DE SALDO CERO. 
-        # Ahora forzosamente registrará las cuentas de COI aunque tengan 0.
-        # if abs(data.get('Saldo', 0)) <= 0.01:
-        #     continue
+        if abs(data.get('Saldo', 0)) <= 0.01:
+            continue  # Sin saldo no aportan información
             
         prefix = normalize_code(data['Cuenta_Orig'])[:4]
         pos    = anchors.get(prefix, 99999)
