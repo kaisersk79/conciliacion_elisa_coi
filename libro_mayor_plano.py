@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 
 # --- CONFIGURACIÓN ---
-FILE_PATH = 'libro_mayor_dic.xlsx'
+FILE_PATH = 'libro_mayor.xlsx'
 HEADER_ROW = 2 
 
 MAJOR_NAME_MAP = {

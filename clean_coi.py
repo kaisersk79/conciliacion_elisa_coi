@@ -3,7 +3,7 @@ import numpy as np
 import re
 
 # --- CONFIGURACIÓN ---
-FILE_PATH = 'aux_coi_dic.xlsx' 
+FILE_PATH = 'aux_coi.xlsx'
 
 def obtener_nombre_rubro(cuenta_str: str) -> str:
     c = str(cuenta_str or "").strip()
