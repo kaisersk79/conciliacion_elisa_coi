@@ -287,24 +287,38 @@ def generar_analisis_v18_7():
 
         # ── Intento de match en COI ───────────────────────────────────────────
         if key_norm and key_norm in coi_lookup:
-            # ✓ Match por HEADER_MAP o por código extraído de descripción
-            c = coi_lookup[key_norm]
-            item['COI_Cta']  = c['Cuenta_Orig']
-            item['COI_Desc'] = c['Descripcion']
-            item['COI_Saldo'] = c['Saldo']
+            # Verificar si este código COI ya fue consumido por una fila anterior.
+            # Esto ocurre cuando varias cuentas Odoo comparten el mismo código COI
+            # en su descripción (ej. 1110-001-000a, 1110-001-000b, 1110-001-000c):
+            # solo la primera hace el match real; las demás se tratan como
+            # SIN CUENTA PROPIA para evitar comparar cada una contra el total COI.
+            # Excepción: las entradas de HEADER_MAP siempre hacen su propio match
+            # (is_h=True) porque tienen asignación explícita y única.
+            if key_norm in cuentas_coi_consumidas and not is_h:
+                c = coi_lookup[key_norm]
+                parent_odoo, _ = find_parent_fallback_coi(cta_o)
+                item['COI_Cta']  = f"[En {c['Cuenta_Orig']}]"
+                item['COI_Desc'] = f"Sub-cuenta de {c['Cuenta_Orig']} (ya contabilizada)"
+                item['Status']   = 'SIN CUENTA PROPIA'
+            else:
+                # ✓ Match por HEADER_MAP o por código extraído de descripción
+                c = coi_lookup[key_norm]
+                item['COI_Cta']  = c['Cuenta_Orig']
+                item['COI_Desc'] = c['Descripcion']
+                item['COI_Saldo'] = c['Saldo']
 
-            # Marcar cuenta COI como consumida
-            cuentas_coi_consumidas.add(key_norm)
-            # Si es suma virtual, marcar también cada componente para que no
-            # aparezcan como huérfanos (ya están contabilizados en la suma)
-            if key_norm in [normalize_code(k) for k in VIRTUAL_COI_SUMS]:
-                orig_key = c['Cuenta_Orig']
-                for comp in VIRTUAL_COI_SUMS.get(orig_key, []):
-                    cuentas_coi_consumidas.add(normalize_code(comp))
+                # Marcar cuenta COI como consumida
+                cuentas_coi_consumidas.add(key_norm)
+                # Si es suma virtual, marcar también cada componente para que no
+                # aparezcan como huérfanos (ya están contabilizados en la suma)
+                if key_norm in [normalize_code(k) for k in VIRTUAL_COI_SUMS]:
+                    orig_key = c['Cuenta_Orig']
+                    for comp in VIRTUAL_COI_SUMS.get(orig_key, []):
+                        cuentas_coi_consumidas.add(normalize_code(comp))
 
-            diff = abs(saldo_o or 0.0) - abs(item['COI_Saldo'] or 0.0)
-            item['Diff']   = diff if abs(diff) > 0.01 else None
-            item['Status'] = "OK" if abs(diff) < 0.1 else "DIFERENCIA"
+                diff = abs(saldo_o or 0.0) - abs(item['COI_Saldo'] or 0.0)
+                item['Diff']   = diff if abs(diff) > 0.01 else None
+                item['Status'] = "OK" if abs(diff) < 0.1 else "DIFERENCIA"
 
         else:
             # ── Fallback 1: búsqueda por nombre en descripciones COI ──────────
