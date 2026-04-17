@@ -8,7 +8,7 @@ import math
 # =============================================================================
 FILE_ODOO = 'Reporte_Contable_Final.xlsx'   # Salida de libro_mayor_plano.py
 FILE_COI  = 'COI_Final_SumaCorrecta.xlsx'   # Salida de clean_coi.py
-FILE_OUTPUT = 'Analisis_Comparativo_Diciembre_V18_7.xlsx'
+FILE_OUTPUT = 'Analisis_Comparativo.xlsx'
 
 # =============================================================================
 # 1. CHECK ABUELAS / MAMAS
